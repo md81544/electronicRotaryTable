@@ -9,8 +9,8 @@ display to allow accurate positioning. This allows
 gears, for example, to be cut.
 
 This project entails putting a stepper motor on the
-worm drive which rotates the table, and drives it
-with a Raspberry Pi. Unlike the Electronic Lead Screw
+worm drive which rotates the table, and driving it
+with a Raspberry Pi. Unlike my Electronic Lead Screw
 project, this doesn't require precise timing or a
 powerful stepper - all it's doing is repeatably rotating
 the workpiece, which is then machined, then rotated
