@@ -1,6 +1,6 @@
 ## Electronic Rotary Table
 This project is designed to allow precise rotation of a
-work piece for working on with, for example, a milling
+workpiece for machining with, for example, a milling
 machine.
 
 Typically a rotary table is used for this operation,
