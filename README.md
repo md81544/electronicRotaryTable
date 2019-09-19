@@ -10,8 +10,7 @@ gears, for example, to be cut.
 
 This project entails putting a stepper motor on the
 worm drive which rotates the table, and driving it
-with a Raspberry Pi. Unlike my [Electronic Lead Screw]
-(https://github.com/md81544/electronicLeadScrew/)
+with a Raspberry Pi. Unlike my [Electronic Lead Screw](https://github.com/md81544/electronicLeadScrew/)
 project, this doesn't require precise timing or a
 powerful stepper - all it's doing is repeatably rotating
 the workpiece, which is then machined, then rotated
