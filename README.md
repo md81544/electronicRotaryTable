@@ -1,4 +1,4 @@
-##Electronic Rotary Table
+## Electronic Rotary Table
 This project is designed to allow precise rotation of a
 work piece for working on with, for example, a milling
 machine.
