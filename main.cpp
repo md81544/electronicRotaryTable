@@ -4,7 +4,9 @@
 #include "gpio.h"
 #endif
 
+#include "input.h"
 #include "log.h"
+
 
 #include <iostream>
 
@@ -21,7 +23,20 @@ int main()
             mgo::Gpio gpio( 8, 7 );
         #endif
 
-        // TO DO - everything :)
+        std::string t = mgo::input( "How many teeth to cut? " );
+        int teeth = std::stoi( t );
+        if( teeth < 1 && teeth > 999 )
+        {
+            std::cout << "Invalid number\n";
+            return 1;
+        }
+        std::cout << "You want " << teeth << " teeth\n";
+        std::cout << "That's " << 360.f / teeth << "° per tooth\n\n";
+        std::cout << "Press ENTER when you've made the first cut: ";
+        std::cin.ignore();
+
+        // TODO: initialise the stepper motor and loop until we
+        // have rotated 360°
 
         return 0;
     }

@@ -1,6 +1,6 @@
 CC      = g++
 CFLAGS  = -std=c++14 -O3 -Wall -Wextra -Wpedantic -Werror -g
-LIBS = -lncurses -pthread
+LIBS = -lncurses -pthread -lreadline
 
 SOURCES := $(wildcard *.cpp)
 FAKESOURCES := $(shell ls *.cpp | grep -v gpio.cpp)
