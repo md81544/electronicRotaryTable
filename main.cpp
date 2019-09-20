@@ -21,7 +21,7 @@ int main()
             mgo::Gpio gpio( 8, 7 );
         #endif
 
-        std::cout 
+        // TO DO - everything :)
 
         return 0;
     }
