@@ -24,7 +24,9 @@ int main()
             mgo::Gpio gpio( 8, 7 );
         #endif
 
-        mgo::StepperMotor motor( gpio, 1'000 );
+        // TODO: put in config?
+        const int stepsPerRevolution = 1'600;
+        mgo::StepperMotor motor( gpio, stepsPerRevolution );
 
         std::string t = mgo::input( "Gear module? ", "1.0" );
         float module = std::stof( t );
@@ -39,7 +41,11 @@ int main()
         }
         std::cout  << "Cutting " << teeth << " teeth, at "
                    << 360.f / teeth << "° per tooth\n";
-        std::cout << "Cut depth should be " << cutDepth << "mm\n" << std::endl;
+        std::cout << "Cut depth should be " << cutDepth << "mm\n";
+        float stepsPerCut = ( 360.f / teeth ) * ( stepsPerRevolution / 5.f );
+        std::cout << "DEBUG: Steps per cut = " << stepsPerCut << "\n";
+        std::cout << std::endl;
+
         std::cout << "Press ENTER to take up any backlash: ";
         std::cin.ignore();
 
@@ -51,9 +57,6 @@ int main()
         std::cin.ignore();
 
         // My rotary table turns 5° for one full revolution of the stepper motor
-        float stepsPerCut = ( 360.f / teeth ) * 200.f;
-        std::cout << "DEBUG: Steps per cut = " << stepsPerCut << std::endl;
-
         for( int n = 1; n <= teeth; ++n )
         {
             if ( n < teeth )
