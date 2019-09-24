@@ -26,22 +26,27 @@ int main()
 
         mgo::StepperMotor motor( gpio, 1'000 );
 
-        std::string t = mgo::input( "How many teeth to cut? " );
+        std::string t = mgo::input( "Gear module? ", "1.0" );
+        float module = std::stof( t );
+        t = mgo::input( "How many teeth to cut? " );
+        float cutDepth = 2.25f * module;
+        // special case if module is less than 1.25f:
+        if( module < 1.25f ) cutDepth = 2.4f * module;
         int teeth = std::stoi( t );
         if( teeth < 1 && teeth > 999 )
         {
-            std::cout << "Invalid number\n";
-            return 1;
+            throw std::invalid_argument( "Invalid number of teeth (use 1-999)" );
         }
         std::cout  << "Cutting " << teeth << " teeth, at "
-                   << 360.f / teeth << "° per tooth\n\n";
+                   << 360.f / teeth << "° per tooth\n";
+        std::cout << "Cut depth should be " << cutDepth << "mm\n" << std::endl;
         std::cout << "Press ENTER to take up any backlash: ";
         std::cin.ignore();
 
         motor.setRpm( 60 );
         motor.goToStep( 500 );
         motor.zeroPosition();
-        motor.wait(); // The motor is driven on a separate thread so we wait for it
+        motor.wait(); // The motor is driven on a separate thread so we wait
         std::cout << "Now take the first cut and press ENTER when done";
         std::cin.ignore();
 
@@ -70,9 +75,13 @@ int main()
 
         return 0;
     }
+    catch( const std::invalid_argument& e )
+    {
+        std::cout << "Invalid entry!" << std::endl;
+    }
     catch( const std::exception& e )
     {
         std::cout << "Exception encountered: " << e.what() << std::endl;
-        return 1;
     }
+    return 1;
 }
