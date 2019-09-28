@@ -1,7 +1,9 @@
 #include "input.h"
-#include <memory>
 
 #include <readline/readline.h>
+
+#include <memory>
+#include <stdlib.h>
 
 namespace
 {
@@ -50,3 +52,4 @@ std::string input(
 }
 
 } // end namespace
+
