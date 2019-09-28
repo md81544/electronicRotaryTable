@@ -24,7 +24,7 @@ int main()
             mgo::Gpio gpio( 8, 7 );
         #endif
 
-        mgo::StepperMotor motor( gpio, 1'000 );
+        mgo::StepperMotor motor( gpio, 1'600 );
 
         std::string t = mgo::input( "How many teeth to cut? " );
         int teeth = std::stoi( t );
@@ -39,7 +39,7 @@ int main()
         std::cin.ignore();
 
         motor.setRpm( 60 );
-        motor.goToStep( 500 );
+        motor.goToStep( 800 );
         motor.zeroPosition();
         motor.wait(); // The motor is driven on a separate thread so we wait for it
         std::cout << "Now take the first cut and press ENTER when done";
