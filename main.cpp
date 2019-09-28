@@ -25,7 +25,7 @@ int main()
         #endif
 
         // TODO: put in config?
-        const int stepsPerRevolution = 1'600;
+        const int stepsPerRevolution = 6'400;
         mgo::StepperMotor motor( gpio, stepsPerRevolution );
 
         std::string t = mgo::input( "Gear module? ", "1.0" );
