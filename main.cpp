@@ -42,9 +42,10 @@ int main()
         }
         std::cout  << "Cutting " << teeth << " teeth, at "
                    << 360.f / teeth << "° per tooth\n";
-        std::cout << "Cut depth should be " << cutDepth << "mm\n";
+        std::cout << "Diameter of blank should be "
+                  << static_cast<float>( teeth + 2 ) * module << " mm\n";
+        std::cout << "Cut depth should be " << cutDepth << " mm\n";
         float stepsPerCut = ( 360.f / teeth ) * ( stepsPerRevolution / 5.f );
-        std::cout << "DEBUG: Steps per cut = " << stepsPerCut << "\n";
         std::cout << std::endl;
 
         std::cout << "Press ENTER to take up any backlash: ";
