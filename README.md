@@ -16,6 +16,8 @@ powerful stepper - all it's doing is repeatably rotating
 the workpiece, which is then machined, then rotated
 again, until complete.
 
+[See this code in action](https://youtu.be/4pt8MZhDIB4)
+
 ### TO DO
 - [ ] Several components are shared from the ELS project so should be placed in a separate git submodule
 - [X] UI code (very simple CLI interface)
