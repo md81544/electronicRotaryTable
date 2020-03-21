@@ -1,12 +1,12 @@
 #ifdef FAKE
-#include "mockgpio.h"
+#include "stepperControl/mockgpio.h"
 #else
-#include "gpio.h"
+#include "stepperControl/gpio.h"
 #endif
 
 #include "input.h"
 #include "log.h"
-#include "steppermotor.h"
+#include "stepperControl/steppermotor.h"
 
 
 #include <iostream>
