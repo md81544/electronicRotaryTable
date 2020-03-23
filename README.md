@@ -1,4 +1,7 @@
 ## Electronic Rotary Table
+
+As this repository contains a submodule now, use "git clone --recurse-submodules " to clone it
+
 This project is designed to allow precise rotation of a
 workpiece for machining with, for example, a milling
 machine.
