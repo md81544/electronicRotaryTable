@@ -22,12 +22,12 @@ int main()
         #ifdef FAKE
             mgo::MockGpio gpio( false );
         #else
-            mgo::Gpio gpio( 8, 7 );
+            mgo::Gpio gpio();
         #endif
 
         // TODO: put in config?
         const int stepsPerRevolution = 6'400;
-        mgo::StepperMotor motor( gpio, stepsPerRevolution );
+        mgo::StepperMotor motor( gpio, 8, 7, stepsPerRevolution );
 
         std::string t = mgo::input( "Gear module? ", "1.0" );
         float module = std::stof( t );
