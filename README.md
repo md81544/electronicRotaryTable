@@ -22,6 +22,6 @@ again, until complete.
 [See this code in action](https://youtu.be/4pt8MZhDIB4)
 
 ### TO DO
-- [ ] Several components are shared from the ELS project so should be placed in a separate git submodule
+- [X] Several components are shared from the ELS project so should be placed in a separate git submodule
 - [X] UI code (very simple CLI interface)
 - [ ] Update UI to enable a step backwards if required
