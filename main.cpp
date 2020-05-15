@@ -22,7 +22,7 @@ int main()
         #ifdef FAKE
             mgo::MockGpio gpio( false );
         #else
-            mgo::Gpio gpio();
+            mgo::Gpio gpio;
         #endif
 
         // TODO: put in config?
