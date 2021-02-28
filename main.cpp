@@ -8,12 +8,20 @@
 #include "log.h"
 #include "stepperControl/steppermotor.h"
 
+#include <signal.h>
 
 #include <iostream>
 #include <stdexcept>
 
+void sigintHandler( int )
+{
+    std::cout << "\n\nExiting.\n\n";
+    exit( 1 );
+}
+
 int main()
 {
+    signal ( SIGINT, sigintHandler );
     try
     {
         INIT_MGOLOG( "ert.log" );
@@ -25,21 +33,26 @@ int main()
             mgo::Gpio gpio;
         #endif
 
-        // TODO: put in config?
-        const int stepsPerRevolution = 6'400;
-        mgo::StepperMotor motor( gpio, 8, 7, 0, stepsPerRevolution, 1.0 / stepsPerRevolution, 240.f );
+        // TODO: This should all be in a config file
+        const int stepsPerRevolution = 4'000;
+        mgo::StepperMotor motor(
+            gpio, 10, 9, 0, stepsPerRevolution, 1.0 / stepsPerRevolution, 900.f );
 
         std::string t = mgo::input( "Gear module? ", "1.0" );
         float module = std::stof( t );
         t = mgo::input( "How many teeth to cut? " );
-        float cutDepth = 2.25f * module;
-        // special case if module is less than 1.25f:
-        if( module < 1.25f ) cutDepth = 2.4f * module;
+
         int teeth = std::stoi( t );
         if( teeth < 1 && teeth > 999 )
         {
             throw std::invalid_argument( "Invalid number of teeth (use 1-999)" );
         }
+
+        // Cut depth (aka "whole depth") - I've seen conflicting formulae for this,
+        // I use 2.157f * module, but another method I've seen is 2.25f * module, unless
+        // module < 1.25f, in which case 2.4f is used as a multiplier.
+        float cutDepth = 2.157 * module;
+
         std::cout  << "Cutting " << teeth << " teeth, at "
                    << 360.f / teeth << "° per tooth\n";
         std::cout << "Diameter of blank should be "
@@ -51,8 +64,9 @@ int main()
         std::cout << "Press ENTER to take up any backlash: ";
         std::cin.ignore();
 
-        motor.setRpm( 60 );
-        motor.goToStep( 800 );
+        long currentStep = 800L;
+        motor.setRpm( 120.0 );
+        motor.goToStep( currentStep );
         motor.zeroPosition();
         motor.wait(); // The motor is driven on a separate thread so we wait
         std::cout << "Now take the first cut and press ENTER when done";
@@ -64,16 +78,18 @@ int main()
             if ( n < teeth )
             {
                 std::cout << "Moving to cut " << n + 1 << std::endl;
-                motor.goToStep( n * stepsPerCut );
+                currentStep += stepsPerCut;
+                motor.goToStep( currentStep );
                 motor.wait();
-                std::cout << "Take the cut and press ENTER when done";
+                std::cout << "Take the cut and press ENTER when done ";
                 std::cin.ignore();
                 std::cout << std::endl;
             }
             else
             {
                 std::cout << "Done, returning to first cut" << std::endl;
-                motor.goToStep( n * stepsPerCut );
+                currentStep += stepsPerCut;
+                motor.goToStep( currentStep );
                 motor.wait();
             }
         }
