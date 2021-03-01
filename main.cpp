@@ -4,6 +4,7 @@
 #include "stepperControl/gpio.h"
 #endif
 
+#include "configreader.h"
 #include "input.h"
 #include "log.h"
 #include "stepperControl/steppermotor.h"
@@ -19,7 +20,7 @@ void sigintHandler( int )
     exit( 1 );
 }
 
-int main()
+int main( int argc, char* argv[] )
 {
     signal ( SIGINT, sigintHandler );
     try
@@ -27,18 +28,35 @@ int main()
         INIT_MGOLOG( "ert.log" );
         MGOLOG( "Program started" );
 
+        std::string configFile = "ert.cfg";
+        if( argc > 1 )
+        {
+            if( argv[1][0] == '-' )
+            {
+                std::cout << "\nUsage: ert <configfile>\n\n";
+                return 0;
+            }
+            configFile = argv[1];
+        }
+        mgo::ConfigReader cfg( configFile );
+
         #ifdef FAKE
             mgo::MockGpio gpio( false );
         #else
             mgo::Gpio gpio;
         #endif
 
-        // TODO: This should all be in a config file
-        const int stepsPerRevolution = 4'000;
         mgo::StepperMotor motor(
-            gpio, 10, 9, 0, stepsPerRevolution, 1.0 / stepsPerRevolution, 900.f );
+            gpio,
+            cfg.readLong( "GpioStepPin", 10L ),
+            cfg.readLong( "GpioReversePin", 9L ),
+            cfg.readLong( "GpioEnablePin", 11L ),
+            cfg.readLong( "StepsPerRev", 4'000L ),
+            1.0, // Conversion factor not used in this program
+            cfg.readLong( "MaxMotorSpeed", 900L )
+            );
 
-        std::string t = mgo::input( "Gear module? ", "1.0" );
+        std::string t = mgo::input( "Gear module? ", cfg.read( "DefaultGearModule", "1.0" ) );
         float module = std::stof( t );
         t = mgo::input( "How many teeth to cut? " );
 
@@ -53,6 +71,7 @@ int main()
         // module < 1.25f, in which case 2.4f is used as a multiplier.
         float cutDepth = 2.157 * module;
 
+        float stepsPerRevolution = cfg.readDouble( "StepsPerRev", 4'000.0 );
         std::cout  << "Cutting " << teeth << " teeth, at "
                    << 360.f / teeth << "° per tooth\n";
         std::cout << "Diameter of blank should be "
@@ -64,8 +83,8 @@ int main()
         std::cout << "Press ENTER to take up any backlash: ";
         std::cin.ignore();
 
-        long currentStep = 800L;
-        motor.setRpm( 120.0 );
+        long currentStep = cfg.readLong( "BacklashCompensationSteps", 800L );
+        motor.setRpm( cfg.readDouble( "MotorRpm", 120.0 ) );
         motor.goToStep( currentStep );
         motor.zeroPosition();
         motor.wait(); // The motor is driven on a separate thread so we wait

@@ -36,4 +36,4 @@ ert
 # Other
 tags
 *.log
-.vscode
+.vscode/settings.json
