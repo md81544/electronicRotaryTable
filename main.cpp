@@ -16,7 +16,7 @@
 
 void sigintHandler( int )
 {
-    std::cout << "\n\nExiting.\n\n";
+    std::cout << "\n";
     exit( 1 );
 }
 
