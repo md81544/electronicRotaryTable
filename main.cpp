@@ -22,7 +22,6 @@ void sigintHandler( int )
 
 int main( int argc, char* argv[] )
 {
-    signal ( SIGINT, sigintHandler );
     try
     {
         INIT_MGOLOG( "ert.log" );
@@ -45,6 +44,9 @@ int main( int argc, char* argv[] )
         #else
             mgo::Gpio gpio;
         #endif
+
+        gpio.setSigHandler(  2, sigintHandler );
+        gpio.setSigHandler( 11, sigintHandler );
 
         mgo::StepperMotor motor(
             gpio,
