@@ -87,8 +87,8 @@ int main( int argc, char* argv[] )
 
         long currentStep = cfg.readLong( "BacklashCompensationSteps", 800L );
         motor.setRpm( cfg.readDouble( "MotorRpm", 120.0 ) );
-        motor.goToStep( currentStep );
         motor.zeroPosition();
+        motor.goToStep( currentStep );
         motor.wait(); // The motor is driven on a separate thread so we wait
         std::cout << "Now take the first cut and press ENTER when done";
         std::cin.ignore();
