@@ -5,6 +5,7 @@
 #endif
 
 #include "configreader.h"
+#include "curses.h"
 #include "input.h"
 #include "log.h"
 #include "stepperControl/steppermotor.h"
@@ -14,14 +15,10 @@
 #include <iostream>
 #include <stdexcept>
 
-void sigintHandler( int )
-{
-    std::cout << "\n";
-    exit( 1 );
-}
-
 int main( int argc, char* argv[] )
 {
+    signal( SIGINT, SIG_IGN ); // Ignore Ctrl-C
+
     try
     {
         INIT_MGOLOG( "ert.log" );
@@ -45,9 +42,6 @@ int main( int argc, char* argv[] )
             mgo::Gpio gpio;
         #endif
 
-        gpio.setSigHandler(  2, sigintHandler );
-        gpio.setSigHandler( 11, sigintHandler );
-
         mgo::StepperMotor motor(
             gpio,
             cfg.readLong( "GpioStepPin", 10L ),
@@ -58,9 +52,16 @@ int main( int argc, char* argv[] )
             cfg.readLong( "MaxMotorSpeed", 900L )
             );
 
-        std::string t = mgo::input( "Gear module? ", cfg.read( "DefaultGearModule", "1.0" ) );
+
+        using namespace mgo::Curses;
+        Window scr;
+
+        scr.move( 2, 2 );
+        std::string t = scr.getString( "Gear module?", cfg.read( "DefaultGearModule", "1.0" ) );
+        //std::string t = mgo::input( "Gear module? ", cfg.read( "DefaultGearModule", "1.0" ) );
         float module = std::stof( t );
-        t = mgo::input( "How many teeth to cut? " );
+        scr.move( 3, 2 );
+        t = scr.getString( "How many teeth to cut?" );
 
         int teeth = std::stoi( t );
         if( teeth < 1 && teeth > 999 )
@@ -74,44 +75,65 @@ int main( int argc, char* argv[] )
         float cutDepth = 2.157 * module;
 
         float stepsPerRevolution = cfg.readDouble( "StepsPerRev", 4'000.0 );
-        std::cout  << "Cutting " << teeth << " teeth, at "
-                   << 360.f / teeth << "° per tooth\n";
-        std::cout << "Diameter of blank should be "
-                  << static_cast<float>( teeth + 2 ) * module << " mm\n";
-        std::cout << "Cut depth should be " << cutDepth << " mm\n";
+        scr.move( 5, 2 );
+        scr  << "Cutting " << teeth << " teeth, at "
+             << 360.f / teeth << "° per tooth";
+        scr.move( 6, 2 );
+        scr << "Diameter of blank should be "
+            << static_cast<float>( teeth + 2 ) * module << " mm";
+        scr.move( 7, 2 );
+        scr << "Cut depth should be " << cutDepth << " mm";
         float stepsPerCut = ( 360.f / teeth ) * ( stepsPerRevolution / 5.f );
-        std::cout << std::endl;
 
-        std::cout << "Press ENTER to take up any backlash: ";
-        std::cin.ignore();
+        scr.move( 9, 2 );
+        scr << "Press ENTER to take up any backlash: ";
+        scr.refresh();
+        scr.getChar();
 
         long currentStep = cfg.readLong( "BacklashCompensationSteps", 800L );
         motor.setRpm( cfg.readDouble( "MotorRpm", 120.0 ) );
         motor.zeroPosition();
         motor.goToStep( currentStep );
         motor.wait(); // The motor is driven on a separate thread so we wait
-        std::cout << "Now take the first cut and press ENTER when done";
-        std::cin.ignore();
+        scr.move( 9, 2 );
+        scr.clearToEol();
+        scr << "Now take the first cut and press ENTER when done ";
+        scr.refresh();
+        scr.getChar();
 
         // My rotary table turns 5° for one full revolution of the stepper motor
         for( int n = 1; n <= teeth; ++n )
         {
             if ( n < teeth )
             {
-                std::cout << "Moving to cut " << n + 1 << std::endl;
+                scr.move( 9, 2 );
+                scr.clearToEol();
+                scr << "Moving to cut " << n + 1 << "... ";
+                scr.refresh();
                 currentStep += stepsPerCut;
                 motor.goToStep( currentStep );
                 motor.wait();
-                std::cout << "Take the cut and press ENTER when done ";
-                std::cin.ignore();
-                std::cout << std::endl;
+                scr.move( 9, 2 );
+                scr.clearToEol();
+                scr << "Take cut " << n + 1 << ", and press ENTER when done ";
+                scr.refresh();
+                scr.getChar();
+
             }
             else
             {
-                std::cout << "Done, returning to first cut" << std::endl;
+                scr.move( 9, 2 );
+                scr.clearToEol();
+                scr << "Done, returning to first cut...";
+                scr.refresh();
                 currentStep += stepsPerCut;
                 motor.goToStep( currentStep );
                 motor.wait();
+                scr.move( 9, 2 );
+                scr.clearToEol();
+                scr << "Press ENTER to quit";
+                scr.refresh();
+                scr.getChar();
             }
         }
 
