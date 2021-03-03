@@ -15,6 +15,32 @@
 #include <iostream>
 #include <stdexcept>
 
+class UserAbort: public std::runtime_error
+{
+public:
+    explicit UserAbort( const std::string& message )
+    : std::runtime_error(message)
+    {}
+};
+
+void message( mgo::Curses::Window& scr, const std::string& msg )
+{
+    scr.move( 9, 2 );
+    scr.clearToEol();
+    scr << msg;
+    scr.refresh();
+}
+
+void waitForKeyPress( mgo::Curses::Window& scr,  const std::string& msg )
+{
+    message( scr, msg );
+    int n = scr.getChar();
+    if ( n == 'q' || n == 'Q' )
+    {
+        throw UserAbort( "User aborted" );
+    }
+}
+
 int main( int argc, char* argv[] )
 {
     signal( SIGINT, SIG_IGN ); // Ignore Ctrl-C
@@ -53,8 +79,7 @@ int main( int argc, char* argv[] )
             );
 
 
-        using namespace mgo::Curses;
-        Window scr;
+        mgo::Curses::Window scr;
 
         scr.move( 2, 2 );
         std::string t = scr.getString( "Gear module?", cfg.read( "DefaultGearModule", "1.0" ) );
@@ -85,59 +110,45 @@ int main( int argc, char* argv[] )
         scr << "Cut depth should be " << cutDepth << " mm";
         float stepsPerCut = ( 360.f / teeth ) * ( stepsPerRevolution / 5.f );
 
-        scr.move( 9, 2 );
-        scr << "Press ENTER to take up any backlash: ";
-        scr.refresh();
-        scr.getChar();
+        waitForKeyPress( scr, "Press any key to take up any backlash... " );
 
         long currentStep = cfg.readLong( "BacklashCompensationSteps", 800L );
         motor.setRpm( cfg.readDouble( "MotorRpm", 120.0 ) );
         motor.zeroPosition();
         motor.goToStep( currentStep );
         motor.wait(); // The motor is driven on a separate thread so we wait
-        scr.move( 9, 2 );
-        scr.clearToEol();
-        scr << "Now take the first cut and press ENTER when done ";
-        scr.refresh();
-        scr.getChar();
+
+        waitForKeyPress( scr,  "Now take the first cut and press ENTER when done " );
 
         // My rotary table turns 5° for one full revolution of the stepper motor
         for( int n = 1; n <= teeth; ++n )
         {
             if ( n < teeth )
             {
-                scr.move( 9, 2 );
-                scr.clearToEol();
-                scr << "Moving to cut " << n + 1 << "... ";
-                scr.refresh();
+                std::string msg = "Moving to cut " + std::to_string( n + 1 ) + "... ";
+                message( scr, msg );
                 currentStep += stepsPerCut;
                 motor.goToStep( currentStep );
                 motor.wait();
-                scr.move( 9, 2 );
-                scr.clearToEol();
-                scr << "Take cut " << n + 1 << ", and press ENTER when done ";
-                scr.refresh();
-                scr.getChar();
-
+                msg = "Take cut " + std::to_string( n + 1 ) +
+                    ", and press ENTER when done ";
+                waitForKeyPress( scr, msg );
             }
             else
             {
-                scr.move( 9, 2 );
-                scr.clearToEol();
-                scr << "Done, returning to first cut...";
-                scr.refresh();
+                message( scr, "Done, returning to first cut..." );
                 currentStep += stepsPerCut;
                 motor.goToStep( currentStep );
                 motor.wait();
-                scr.move( 9, 2 );
-                scr.clearToEol();
-                scr << "Press ENTER to quit";
-                scr.refresh();
-                scr.getChar();
+                waitForKeyPress( scr, "All done, press ENTER to quit" );
             }
         }
 
         return 0;
+    }
+    catch( const UserAbort& e )
+    {
+        std::cout << e.what() << std::endl;
     }
     catch( const std::invalid_argument& e )
     {
