@@ -1,25 +1,30 @@
 #pragma once
 
 // Simple wrapper for ncurses.
-// TODO: colours, mouse
 
-#include <ncurses.h>
-
+#include <curses.h>
 #include <sstream>
+#include <string>
 #include <tuple>
-#include <unordered_map>
-#include <memory>
+
 
 namespace mgo
 {
 namespace Curses
 {
 
-enum class Cursor{ Off, On };
-enum class Input{ Blocking, NonBlocking };
-enum class Scrolling{ On, Off };
+enum class Cursor{ off, on };
+enum class Input{ blocking, nonBlocking };
+enum class Scrolling{ on, off };
 
-
+enum class Colours : short int
+{
+    greenOnBlack = 1,
+    redOnBlack,
+    yellowOnBlack,
+    whiteOnBlack,
+    cyanOnBlack
+};
 
 class Window
 {
@@ -31,7 +36,7 @@ public:
     ~Window();
     void refresh();
     void move(int y, int x);
-    int getChar();
+    int getKey();
     std::tuple<int, int> getScreenSize();
     std::string getString(
         const std::string& prompt,
@@ -42,12 +47,13 @@ public:
     void setBlocking(mgo::Curses::Input block);
     void cursor(mgo::Curses::Cursor cursor);
     void scrolling(mgo::Curses::Scrolling scrolling);
+    void setColour( Colours );
 private:
     void printOss();
     std::ostringstream m_oss;
     WINDOW* m_handle;
     WINDOW* m_borderHandle{nullptr};
-    static size_t m_instanceCount;
+    static std::size_t m_instanceCount;
 
     template <typename T>
     friend Window& operator<<(Window& win, T t);

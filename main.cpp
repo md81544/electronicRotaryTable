@@ -15,6 +15,13 @@
 #include <iostream>
 #include <stdexcept>
 
+enum class KeyPress
+{
+    Escape,
+    B,
+    Other
+};
+
 class UserAbort: public std::runtime_error
 {
 public:
@@ -23,21 +30,47 @@ public:
     {}
 };
 
-void message( mgo::Curses::Window& scr, const std::string& msg )
+void message( mgo::Curses::Window& scr, const std::string& msg, int y = 9, int x = 2 )
 {
-    scr.move( 9, 2 );
+    scr.setColour( mgo::Curses::Colours::yellowOnBlack );
+    scr.move( y, x );
+    scr.clearToEol();
+    scr << msg;
+    scr.refresh();
+    scr.setColour( mgo::Curses::Colours::greenOnBlack );
+}
+
+void help( mgo::Curses::Window& scr, const std::string& msg )
+{
+    int y;
+    int x;
+    std::tie( y, x ) = scr.getScreenSize();
+    scr.setColour( mgo::Curses::Colours::greenOnBlack );
+    scr.move( y - 3, 2 );
     scr.clearToEol();
     scr << msg;
     scr.refresh();
 }
 
-void waitForKeyPress( mgo::Curses::Window& scr,  const std::string& msg )
+KeyPress waitForKeyPress( mgo::Curses::Window& scr,  const std::string& msg )
 {
     message( scr, msg );
-    int n = scr.getChar();
-    if ( n == 'q' || n == 'Q' )
+    int n = scr.getKey();
+    switch( n )
     {
-        throw UserAbort( "User aborted" );
+        case 17:  // Ctrl-Q seems to generate this
+            throw UserAbort( "Program stopped (Ctrl-Q pressed)" );
+            break;
+        case 27: // Escape
+            return KeyPress::Escape;
+            break;
+        case 'b':
+        case 'B':
+            return KeyPress::B;
+            break;
+        default:
+            return KeyPress::Other;
+            break;
     }
 }
 
@@ -80,6 +113,10 @@ int main( int argc, char* argv[] )
 
 
         mgo::Curses::Window scr;
+        int rows;
+        int cols;
+        std::tie( rows, cols ) = scr.getScreenSize();
+        scr.setColour( mgo::Curses::Colours::greenOnBlack );
 
         scr.move( 2, 2 );
         std::string t = scr.getString( "Gear module?", cfg.read( "DefaultGearModule", "1.0" ) );
@@ -108,41 +145,53 @@ int main( int argc, char* argv[] )
             << static_cast<float>( teeth + 2 ) * module << " mm";
         scr.move( 7, 2 );
         scr << "Cut depth should be " << cutDepth << " mm";
-        float stepsPerCut = ( 360.f / teeth ) * ( stepsPerRevolution / 5.f );
 
-        waitForKeyPress( scr, "Press any key to take up any backlash... " );
+        float stepsPerCut =
+            ( 360.f / teeth ) * ( stepsPerRevolution / cfg.readDouble( "DegreesPerRev", 5.0 ) );
 
-        long currentStep = cfg.readLong( "BacklashCompensationSteps", 800L );
         motor.setRpm( cfg.readDouble( "MotorRpm", 120.0 ) );
-        motor.zeroPosition();
-        motor.goToStep( currentStep );
-        motor.wait(); // The motor is driven on a separate thread so we wait
 
-        waitForKeyPress( scr,  "Now take the first cut and press ENTER when done " );
-
-        // My rotary table turns 5° for one full revolution of the stepper motor
-        for( int n = 1; n <= teeth; ++n )
+        KeyPress keyPressed = waitForKeyPress(
+            scr, "Press any key to take up any backlash (Esc to skip)... " );
+        if( keyPressed != KeyPress::Escape )
         {
-            if ( n < teeth )
+            long currentStep = cfg.readLong( "BacklashCompensationSteps", 800L );
+            motor.goToStep( currentStep );
+            motor.wait();
+        }
+
+        motor.zeroPosition();
+
+        int cut = 1;
+        while( cut <= teeth )
+        {
+            std::string msg = "Take cut " + std::to_string( cut ) + ", and press a key when done ";
+            help( scr, "Press 'b' to move back a step, or Ctrl-Q to quit" );
+            KeyPress key = waitForKeyPress( scr, msg );
+            if( key == KeyPress::B )
             {
-                std::string msg = "Moving to cut " + std::to_string( n + 1 ) + "... ";
-                message( scr, msg );
-                currentStep += stepsPerCut;
-                motor.goToStep( currentStep );
-                motor.wait();
-                msg = "Take cut " + std::to_string( n + 1 ) +
-                    ", and press ENTER when done ";
-                waitForKeyPress( scr, msg );
+                if( cut > 1 )
+                {
+                    --cut;
+                }
             }
             else
             {
-                message( scr, "Done, returning to first cut..." );
-                currentStep += stepsPerCut;
-                motor.goToStep( currentStep );
-                motor.wait();
-                waitForKeyPress( scr, "All done, press ENTER to quit" );
+                ++cut;
             }
+            if( cut > teeth )
+            {
+                msg = "Done, returning to first cut...";
+            }
+            else
+            {
+                msg = "Moving to cut " + std::to_string( cut ) + "... ";
+            }
+            message( scr, msg );
+            motor.goToStep( stepsPerCut * ( cut - 1 ) );
+            motor.wait();
         }
+        waitForKeyPress( scr, "All done, press a key to quit" );
 
         return 0;
     }
