@@ -37,3 +37,7 @@ ert
 tags
 *.log
 .vscode/settings.json
+
+# CMake build trees, and the symlink to compile_commands.json
+build/
+compile_commands.json

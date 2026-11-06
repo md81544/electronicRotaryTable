@@ -108,7 +108,8 @@ int main( int argc, char* argv[] )
             cfg.readLong( "GpioEnablePin", 11L ),
             cfg.readLong( "StepsPerRev", 4'000L ),
             1.0, // Conversion factor not used in this program
-            cfg.readLong( "MaxMotorSpeed", 900L )
+            cfg.readLong( "MaxMotorSpeed", 900L ),
+            0.0 // No speed ramping (as with earlier versions of stepperControl)
             );
 
 
@@ -126,7 +127,7 @@ int main( int argc, char* argv[] )
         t = scr.getString( "How many teeth to cut?" );
 
         int teeth = std::stoi( t );
-        if( teeth < 1 && teeth > 999 )
+        if( teeth < 1 || teeth > 999 )
         {
             throw std::invalid_argument( "Invalid number of teeth (use 1-999)" );
         }

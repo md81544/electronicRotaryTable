@@ -1,27 +1,96 @@
-CC      = g++
-CFLAGS  = -std=c++14 -O3 -Wall -Wextra -Wpedantic -Werror -g
-LIBS = -lncurses -pthread -lreadline
+# Makefile - CMake wrapper
+# Usage:
+#   make          -> debug build, with mocked GPIO (FAKE). `make fake` also works
+#   make release  -> release build against pigpio (Raspberry Pi only)
+#   make latest   -> pull this repo, then make release
+#   make clean    -> remove all build directories and the ert symlink
+#
+# The stepperControl library is fetched by CMake at the version pinned in
+# CMakeLists.txt. To build against a local checkout instead (e.g. when
+# changing both at once), set STEPPERCONTROL_DIR, either per invocation:
+#   make STEPPERCONTROL_DIR=../stepperControl
+# or in your shell profile (export STEPPERCONTROL_DIR=...) on a dev machine.
+# The build trees are reconfigured automatically when it changes.
+#
+# Debug and Release live in separate trees under BUILD_ROOT, so switching
+# between them doesn't wipe the other. The ert and compile_commands.json
+# symlinks in the source root point at whichever was built last.
 
-SOURCES := $(wildcard *.cpp stepperControl/*.cpp)
-FAKESOURCES := $(shell ls *.cpp stepperControl/*.cpp | grep -v gpio.cpp)
+APP_NAME := ert
 
-BINARY = ert
+BUILD_ROOT ?= build
 
-.PHONY: all clean fake
+BUILD_DIR_DEBUG   := $(BUILD_ROOT)/Debug
+BUILD_DIR_RELEASE := $(BUILD_ROOT)/Release
 
-all: $(BINARY)
+MAKEFLAGS += --no-print-directory
 
+CMAKE       := cmake
+CMAKE_FLAGS :=
 
-$(BINARY): $(SOURCES)
-	$(CC) $(CFLAGS) $(SOURCES) -o $(BINARY) $(LIBS) -lpigpio
-	ctags -R --c++-kinds=+p --fields=+iaS
+GENERATOR := Unix Makefiles
+MARKER    := Makefile
+JOBS      := $(shell nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
 
-# Make binary without need for pigpio lib for testing UI
-fake: $(SOURCES)
-	$(CC) -DFAKE $(CFLAGS) $(FAKESOURCES) -o $(BINARY) $(LIBS)
-	ctags -R --c++-kinds=+p --fields=+iaS
-	cppcheck -q $(SOURCES)
+.PHONY: all debug fake release latest clean
 
+ifdef STEPPERCONTROL_DIR
+STEPPERCONTROL_SOURCE := $(abspath $(STEPPERCONTROL_DIR))
+STEPPERCONTROL_FLAG   := -DFETCHCONTENT_SOURCE_DIR_STEPPERCONTROL=$(STEPPERCONTROL_SOURCE)
+else
+STEPPERCONTROL_SOURCE := pinned
+STEPPERCONTROL_FLAG   := -UFETCHCONTENT_SOURCE_DIR_STEPPERCONTROL
+endif
+
+# $(call configure,<build dir>,<build type>,<FAKE ON/OFF>)
+# Runs CMake's configure step if the build tree hasn't been configured yet, or
+# was configured with a different stepperControl source (local checkout vs the
+# pinned version). The record is removed before configuring and only written
+# once configuring succeeds, so a failed configure (which may have left
+# CMake's cache half-changed) is always retried next time.
+# (This compares file contents rather than timestamps, as the make shipped
+# with macOS only has one-second timestamp resolution.)
+define configure
+	@if [ ! -f $(1)/$(MARKER) ] \
+		|| [ "$$(cat $(1)/stepperControl-source.txt 2>/dev/null)" != "$(STEPPERCONTROL_SOURCE)" ]; then \
+		$(CMAKE) -E rm -f $(1)/stepperControl-source.txt && \
+		echo "$(CMAKE) -S . -B $(1) -DCMAKE_BUILD_TYPE=$(2) -DFAKE=$(3) $(STEPPERCONTROL_FLAG) $(CMAKE_FLAGS)" && \
+		$(CMAKE) -S . -B $(1) -G "$(GENERATOR)" -DCMAKE_BUILD_TYPE=$(2) -DFAKE=$(3) \
+			$(STEPPERCONTROL_FLAG) $(CMAKE_FLAGS) && \
+		echo "$(STEPPERCONTROL_SOURCE)" > $(1)/stepperControl-source.txt; \
+	fi
+endef
+
+# ---------------------------------------------------------------------------
+# Default target -> debug
+# ---------------------------------------------------------------------------
+all: debug
+
+# ---------------------------------------------------------------------------
+# Debug build: GPIO and stepper are mocked (FAKE), so it runs on any machine.
+# `fake` is kept as an alias
+# ---------------------------------------------------------------------------
+debug fake:
+	$(call configure,$(BUILD_DIR_DEBUG),Debug,ON)
+	$(CMAKE) --build $(BUILD_DIR_DEBUG) -- -j$(JOBS)
+
+# ---------------------------------------------------------------------------
+# Release build: links pigpio, so needs a Raspberry Pi
+# ---------------------------------------------------------------------------
+release:
+	$(call configure,$(BUILD_DIR_RELEASE),Release,OFF)
+	$(CMAKE) --build $(BUILD_DIR_RELEASE) -- -j$(JOBS)
+
+# ---------------------------------------------------------------------------
+# Update from git, then rebuild for the Pi
+# ---------------------------------------------------------------------------
+latest:
+	git pull
+	$(MAKE) release
+
+# ---------------------------------------------------------------------------
+# Clean
+# ---------------------------------------------------------------------------
 clean:
-	rm -f $(BINARY)
-	rm -f tags
+	@$(CMAKE) -E rm -rf $(BUILD_ROOT) $(APP_NAME) compile_commands.json
+	@echo "-> build directories and symlinks removed"

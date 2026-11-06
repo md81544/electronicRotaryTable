@@ -1,6 +1,19 @@
 ## Electronic Rotary Table
 
-As this repository contains a submodule now, use "git clone --recurse-submodules " to clone it
+### Building
+
+You'll need CMake, ncurses and GNU readline (`sudo apt install cmake libncurses-dev libreadline-dev`
+on a Pi, or `brew install cmake readline` on a Mac).
+
+- `make` builds a version with the hardware mocked out, which runs on any machine
+- `make release` builds the real thing (Raspberry Pi only, as it needs the pigpio library)
+
+The stepper motor code lives in a separate repository, [stepperControl](https://github.com/md81544/stepperControl),
+which CMake downloads automatically when you first build (so the first build needs network access). The
+version used is pinned by `GIT_TAG` in `CMakeLists.txt`. If you're changing stepperControl at the same
+time, clone it alongside and build against your local copy instead:
+
+    make STEPPERCONTROL_DIR=../stepperControl
 
 This project is designed to allow precise rotation of a
 workpiece for machining with, for example, a milling
@@ -22,6 +35,6 @@ again, until complete.
 [See this code in action](https://youtu.be/4pt8MZhDIB4)
 
 ### TO DO
-- [X] Several components are shared from the ELS project so should be placed in a separate git submodule
+- [X] Several components are shared from the ELS project so should be placed in a separate library (stepperControl)
 - [X] UI code (very simple CLI interface)
 - [ ] Update UI to enable a step backwards if required
